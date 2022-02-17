@@ -1,0 +1,10 @@
+*/*.txt
+*/*.out
+
+*/*out*
+*/in*
+*/*test*
+*/*pipe*
+*/*fifo*
+
+.vscode
