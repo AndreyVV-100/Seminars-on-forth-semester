@@ -18,7 +18,7 @@ typedef enum
 int StartClient (Protocol prt);
 
 void ProcessTCP (int sockfd);
-void ProcessUDP (int sockfd);
+void ProcessSending (int sockfd);
 
 int main (int argc, char** argv)
 {
@@ -35,7 +35,7 @@ int main (int argc, char** argv)
     {
         if ((sockfd = StartClient (UDP)) == -1)
             return 0;
-        ProcessUDP (sockfd);
+        ProcessSending (sockfd);
     }
 
     close (sockfd);
@@ -61,7 +61,6 @@ int StartClient (Protocol prt)
 
         int reuse_on = 1;
         try (setsockopt (sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse_on, sizeof (reuse_on)) == -1, "Setsockopt error")
-
     }
 
     #undef try
@@ -70,10 +69,14 @@ int StartClient (Protocol prt)
 
 void ProcessTCP (int sockfd)
 {
-    (void) sockfd;
+    struct sockaddr_in addr = {AF_INET, DEFAULT_PORT, {DEFAULT_IP}, {}};
+    socklen_t addrlen = sizeof (addr);
+    if (connect (sockfd, (struct sockaddr*) &addr, addrlen) == -1)
+        return;
+    ProcessSending (sockfd);
 }
 
-void ProcessUDP (int sockfd)
+void ProcessSending (int sockfd)
 {
     char buf[BUFFER_SIZE] = "";
     struct sockaddr_in addr = {AF_INET, DEFAULT_PORT, {DEFAULT_IP}, {}};
@@ -81,7 +84,11 @@ void ProcessUDP (int sockfd)
     while (1)
     {
         fgets (buf, BUFFER_SIZE, stdin);
-        sendto (sockfd, buf, BUFFER_SIZE, 0, (struct sockaddr*) &addr, sizeof (addr));
+        if (sendto (sockfd, buf, BUFFER_SIZE, 0, (struct sockaddr*) &addr, sizeof (addr)) == -1)
+        {
+            perror ("Sendto error");
+            return;
+        }
     }
 }
 
