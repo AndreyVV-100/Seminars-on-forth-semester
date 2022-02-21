@@ -1,6 +1,11 @@
 #include "config.h"
+#include <errno.h>
+#include <time.h>
 
-#define DEFAULT_IP htonl (INADDR_BROADCAST)
+#define DEFAULT_IP htonl (INADDR_ANY)
+#define SENDER_PORT htons (8080)
+
+const struct timespec WAIT_TIME = {0, 500000000};
 
 int StartSender();
 
@@ -34,7 +39,7 @@ int StartSender()
     int sockfd = socket (AF_INET, SOCK_DGRAM, 0);
     try (sockfd == -1, "Socket error");
 
-    struct sockaddr_in addr = {AF_INET, DEFAULT_PORT, {DEFAULT_IP}, {}};
+    struct sockaddr_in addr = {AF_INET, SENDER_PORT, {DEFAULT_IP}, {}};
     try (bind (sockfd, (struct sockaddr*) &addr, sizeof (struct sockaddr_in)) == -1, "Bind error");
 
     int option_on = 1;
@@ -55,15 +60,30 @@ int SendBroadcast (int sockfd)
 
 int ReceiveAnswer (int sockfd)
 {
-    struct sockaddr_in addr = {};
+    struct sockaddr_in addr = {}, my_addr = {};
     socklen_t addrlen = sizeof (addr);
     char buf[BUFFER_SIZE] = "";
+    size_t clients = 0;
 
-    recvfrom (sockfd, buf, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-    char* ip = inet_ntoa (addr.sin_addr);
-    int port = ntohs (addr.sin_port);
+    nanosleep (&WAIT_TIME, NULL);
 
-    printf ("Answer reseived from [%s:%d]. Messages are %s\n", ip, port, strcmp (buf, str_check) ? "not equal." : "equal.");
+    while (1)
+    {
+        recvfrom (sockfd, buf, BUFFER_SIZE, MSG_DONTWAIT, (struct sockaddr*) &addr, &addrlen);
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            break;
+
+        if (//my_addr.sin_family      == addr.sin_family &&
+            my_addr.sin_port        == addr.sin_port && 
+            my_addr.sin_addr.s_addr == addr.sin_addr.s_addr)
+                continue;
+
+        clients++;
+        char* ip = inet_ntoa (addr.sin_addr);
+        int port = ntohs (addr.sin_port);
+        printf ("Answer received from [%s:%d]. Messages are %s\n", ip, port, strcmp (buf, str_check) ? "not equal." : "equal.");
+    }
+
+    printf ("Checking was ended. Clients founded: %zu.\n", clients);
     return 0;
 }
-
