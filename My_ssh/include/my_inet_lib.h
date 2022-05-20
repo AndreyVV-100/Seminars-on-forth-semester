@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <errno.h>
+#include <poll.h>
 
 // Socket part
 
@@ -28,10 +29,28 @@ typedef enum
     UDP = 1
 } Protocol;
 
+typedef enum
+{
+    UDP_START_CONNECTION = 0,
+    UDP_WORK_CONNECTION  = 1,
+    UDP_END_CONNECTION   = 2,
+    LOGIN_INFO           = 3,
+    BROADCAST_SEARCHING  = 4,
+    FILE_COPY_START      = 5,
+    FILE_COPY_PROCESS    = 6
+} MessageType;
+
+typedef struct
+{
+    MessageType type;
+    char data[];
+} MessageStruct;
+
 // Functions part
 
 int OpenSocket (Protocol prt, in_addr_t ip_addr, in_port_t port);
 static inline int CloseSocket (int sockfd) {return close (sockfd);}
+int CheckReadyForRead (int sockfd, int timeout);
 
 // Logging part
 

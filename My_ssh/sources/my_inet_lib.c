@@ -60,3 +60,10 @@ void WriteLog (int logfd,
 
     return;
 }
+
+int CheckReadyForRead (int sockfd, int timeout)
+{
+    struct pollfd poll_wait_info = {sockfd, POLLIN, 0};
+    poll (&poll_wait_info, 1, timeout);
+    return poll_wait_info.revents & POLLIN;
+}
